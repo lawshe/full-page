@@ -1,0 +1,8 @@
+{
+  "name": "full-page",
+  "description": "Meteor smart package for FullPage.js. Create full screen pages fast and simple.",
+  "homepage": "https://github.com/lawshe/full-page",
+  "author": "Jessica Lawshe",
+  "version": "2.2.1",
+  "git": "https://github.com/lawshe/full-page.git"
+}
