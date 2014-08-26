@@ -5,7 +5,9 @@ Package.describe({
 Package.on_use(function (api) {
     api.add_files([
         'jquery.fullPage.css',
-        'jquery.fullPage.min.js'
+        'jquery.fullPage.min.js',
+        'vendors/jquery.easings.min.js',
+        'vendors/jquery.slimscroll.min.js'
     ], 'client');
 });
 
