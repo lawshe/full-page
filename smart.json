@@ -4,12 +4,12 @@
 "description": "Meteor smart package for FullPage.js. Create full screen pages fast and simple.",
 "homepage": "https://github.com/lawshe/full-page",
 "author": "Jessica Lawshe",
-"version": "0.0.2",
+"version": "0.0.3",
 "githubUrl": "https://github.com/lawshe/full-page.git",
 "recommended":"true",
-"tool": "lawshe:full-page@0.0.2",
+"tool": "lawshe:full-page@0.0.3",
 "packages":
 	{
-		"lawshe:full-page":"0.0.2"
+		"lawshe:full-page":"0.0.3"
 	}
 }
