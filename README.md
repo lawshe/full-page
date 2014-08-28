@@ -2,4 +2,4 @@
 This is a meteor smart package for [fullPage.js](http://alvarotrigo.com/fullPage/).
 
 # How to use
-- `meteor add full-page`
+- `meteor add lawshe:full-page`
