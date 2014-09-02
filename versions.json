@@ -9,8 +9,8 @@
       "1.0.2"
     ],
     [
-      "mizzao:jqueryui",
-      "1.11.0"
+      "mrt:jquery-ui",
+      "1.9.2"
     ],
     [
       "underscore",
