@@ -7,6 +7,14 @@
     [
       "meteor",
       "1.0.2"
+    ],
+    [
+      "mizzao:jqueryui",
+      "1.11.0"
+    ],
+    [
+      "underscore",
+      "1.0.0"
     ]
   ],
   "pluginDependencies": [],
