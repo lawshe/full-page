@@ -6,7 +6,7 @@ Package.describe({
 
 
 Package.on_use(function (api) {
-  api.use('jquery@1.1.0');
+  api.use('jquery@1.0.0');
   api.addFiles('jquery.fullPage.css', 'client');
   api.addFiles('vendors/jquery.easings.min.js', 'client');
   api.addFiles('vendors/jquery.slimscroll.min.js', 'client');
