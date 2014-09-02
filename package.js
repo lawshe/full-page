@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Meteor smart package for FullPage.js. Create full screen pages fast and simple.",
-  version: "0.0.5",
+  version: "1.0.2",
   git: "https://github.com/lawshe/full-page.git"
 });
 
