@@ -11,10 +11,6 @@
     [
       "mrt:jquery-ui",
       "1.9.2"
-    ],
-    [
-      "underscore",
-      "1.0.0"
     ]
   ],
   "pluginDependencies": [],
