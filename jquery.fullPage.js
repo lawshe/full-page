@@ -1,5 +1,5 @@
 /**
- * fullPage 2.2.1
+ * fullPage 2.2.9
  * https://github.com/alvarotrigo/fullPage.js
  * MIT licensed
  *
@@ -74,6 +74,12 @@
 					'height' : '100%'
 				});
 
+				//for IE touch devices
+				container.css({
+					'-ms-touch-action': 'none',
+					'touch-action': 'none'
+				});
+
 				if(element.length){
 					//moving the container up
 					silentScroll(element.position().top);
@@ -81,8 +87,14 @@
 
 			}else{
 				$('html, body').css({
-					'overflow' : 'auto',
-					'height' : 'auto'
+					'overflow' : 'visible',
+					'height' : 'initial'
+				});
+
+				//for IE touch devices
+				container.css({
+					'-ms-touch-action': '',
+					'touch-action': ''
 				});
 
 				silentScroll(0);
@@ -142,6 +154,7 @@
 		var isResizing = false;
 		var lastScrolledDestiny;
 		var lastScrolledSlide;
+		var nav;
 		var wrapperSelector = 'fullpage-wrapper';
 
 		$.fn.fullpage.setAllowScrolling(true);
@@ -154,8 +167,7 @@
 		if($(this).length){
 			container.css({
 				'height': '100%',
-				'position': 'relative',
-				'-ms-touch-action': 'none'
+				'position': 'relative'
 			});
 
 			//adding a class to recognize the container internally in the code
@@ -177,11 +189,7 @@
 
 		//creating the navigation dots
 		if (options.navigation) {
-			$('body').append('<div id="fp-nav"><ul></ul></div>');
-			var nav = $('#fp-nav');
-
-			nav.css('color', options.navigationColor);
-			nav.addClass(options.navigationPosition);
+			addVerticalNavigation();
 		}
 
 		$('.fp-section').each(function(index){
@@ -207,20 +215,6 @@
 			if (typeof options.anchors[index] !== 'undefined') {
 				$(this).attr('data-anchor', options.anchors[index]);
 			}
-
-			if (options.navigation) {
-				var link = '';
-				if(options.anchors.length){
-					link = options.anchors[index];
-				}
-				var tooltip = options.navigationTooltips[index];
-				if(typeof tooltip === 'undefined'){
-					tooltip = '';
-				}
-
-				nav.find('ul').append('<li data-tooltip="' + tooltip + '"><a href="#' + link + '"><span></span></a></li>');
-			}
-
 
 			// if there's any slide
 			if (numSlides > 1) {
@@ -248,32 +242,30 @@
 				}
 
 				slides.each(function(index) {
-					var startingSlide = that.find('.fp-slide.active');
-
-					//if the slide won#t be an starting point, the default will be the first one
-					if(!index && startingSlide.length == 0){
-						$(this).addClass('active');
-					}
-
-					//is there a starting point for a non-starting section?
-					else{
-						silentLandscapeScroll(startingSlide);
-					}
-
 					$(this).css('width', slideWidth + '%');
 
 					if(options.verticalCentered){
 						addTableClass($(this));
 					}
 				});
+
+				var startingSlide = that.find('.fp-slide.active');
+
+				//if the slide won#t be an starting point, the default will be the first one
+				if(startingSlide.length == 0){
+					slides.eq(0).addClass('active');
+				}
+
+				//is there a starting point for a non-starting section?
+				else{
+					silentLandscapeScroll(startingSlide);
+				}
+
 			}else{
 				if(options.verticalCentered){
 					addTableClass($(this));
 				}
 			}
-
-
-
 
 		}).promise().done(function(){
 			$.fn.fullpage.setAutoScrolling(options.autoScrolling);
@@ -303,7 +295,7 @@
 			}
 
 			if(options.scrollOverflow){
-				if(container.hasClass('fullpage-used')){
+				if(document.readyState === "complete"){
 					createSlimScrollingHandler();
 				}
 				//after DOM and images are loaded
@@ -349,6 +341,31 @@
 
 		});
 
+
+		/**
+		* Creates a vertical navigation bar.
+		*/
+		function addVerticalNavigation(){
+			$('body').append('<div id="fp-nav"><ul></ul></div>');
+			nav = $('#fp-nav');
+
+			nav.css('color', options.navigationColor);
+			nav.addClass(options.navigationPosition);
+
+			for(var cont = 0; cont < $('.fp-section').length; cont++){
+				var link = '';
+				if(options.anchors.length){
+					link = options.anchors[cont];
+				}
+				var tooltip = options.navigationTooltips[cont];
+				if(typeof tooltip === 'undefined'){
+					tooltip = '';
+				}
+
+				nav.find('ul').append('<li data-tooltip="' + tooltip + '"><a href="#' + link + '"><span></span></a></li>');
+			}
+		}
+
 		function createSlimScrollingHandler(){
 			$('.fp-section').each(function(){
 				var slides = $(this).find('.fp-slide');
@@ -387,22 +404,20 @@
 
 				//executing only once the first time we reach the section
 				if(!currentSection.hasClass('active')){
-					var leavingSection = $('.fp-section.active').index('.fp-section') + 1;
-
 					isScrolling = true;
 
+					var leavingSection = $('.fp-section.active').index('.fp-section') + 1;
 					var yMovement = getYmovement(currentSection);
+					var anchorLink  = currentSection.data('anchor');
 
 					currentSection.addClass('active').siblings().removeClass('active');
 
-					var anchorLink  = currentSection.data('anchor');
 					$.isFunction( options.onLeave ) && options.onLeave.call( this, leavingSection, (currentSection.index('.fp-section') + 1), yMovement);
 
 					$.isFunction( options.afterLoad ) && options.afterLoad.call( this, anchorLink, (currentSection.index('.fp-section') + 1));
 
 					activateMenuElement(anchorLink);
 					activateNavDots(anchorLink, 0);
-
 
 					if(options.anchors.length && !isMoving){
 						//needed to enter in hashChange event when using the menu with anchor links
@@ -417,7 +432,47 @@
 						isScrolling = false;
 					}, 100);
 				}
+			}
+		}
 
+
+		/**
+		* Determines whether the active section or slide is scrollable through and scrolling bar
+		*/
+		function isScrollable(activeSection){
+			//if there are landscape slides, we check if the scrolling bar is in the current one or not
+			if(activeSection.find('.fp-slides').length){
+				scrollable= activeSection.find('.fp-slide.active').find('.fp-scrollable');
+			}else{
+				scrollable = activeSection.find('.fp-scrollable');
+			}
+
+			return scrollable;
+		}
+
+		/**
+		* Determines the way of scrolling up or down:
+		* by 'automatically' scrolling a section or by using the default and normal scrolling.
+		*/
+		function scrolling(type, scrollable){
+			if(type == 'down'){
+				var check = 'bottom';
+				var scrollSection = $.fn.fullpage.moveSectionDown;
+			}else{
+				var check = 'top';
+				var scrollSection = $.fn.fullpage.moveSectionUp;
+			}
+
+			if(scrollable.length > 0 ){
+				//is the scrollbar at the start/end of the scroll?
+				if(isScrolled(check, scrollable)){
+					scrollSection();
+				}else{
+					return true;
+				}
+			}else{
+				// moved up/down
+				scrollSection();
 			}
 		}
 
@@ -443,10 +498,8 @@
 
 			// additional: if one of the normalScrollElements isn't within options.normalScrollElementTouchThreshold hops up the DOM chain
 			if (!checkParentForNormalScrollElement(event.target)) {
-
-				var touchMoved = false;
 				var activeSection = $('.fp-section.active');
-				var scrollable;
+				var scrollable = isScrollable(activeSection);
 
 				if (!isMoving && !slideMoving) { //if theres any #
 					var touchEvents = getEventsPage(e);
@@ -469,41 +522,12 @@
 					//vertical scrolling (only when autoScrolling is enabled)
 					else if(options.autoScrolling){
 
-						//if there are landscape slides, we check if the scrolling bar is in the current one or not
-						if(activeSection.find('.fp-slides').length){
-							scrollable= activeSection.find('.fp-slide.active').find('.fp-scrollable');
-						}else{
-							scrollable = activeSection.find('.fp-scrollable');
-						}
-
 						//is the movement greater than the minimum resistance to scroll?
 						if (Math.abs(touchStartY - touchEndY) > ($(window).height() / 100 * options.touchSensitivity)) {
 							if (touchStartY > touchEndY) {
-								if(scrollable.length > 0 ){
-									//is the scrollbar at the end of the scroll?
-									if(isScrolled('bottom', scrollable)){
-										$.fn.fullpage.moveSectionDown();
-									}else{
-										return true;
-									}
-								}else{
-									// moved down
-									$.fn.fullpage.moveSectionDown();
-								}
+								scrolling('down', scrollable);
 							} else if (touchEndY > touchStartY) {
-
-								if(scrollable.length > 0){
-									//is the scrollbar at the start of the scroll?
-									if(isScrolled('top', scrollable)){
-										$.fn.fullpage.moveSectionUp();
-									}
-									else{
-										return true;
-									}
-								}else{
-									// moved up
-									$.fn.fullpage.moveSectionUp();
-								}
+								scrolling('up', scrollable);
 							}
 						}
 					}
@@ -511,6 +535,8 @@
 			}
 
 		}
+
+
 
 		/**
 		 * recursive function to loop up the parent nodes to check if one of them exists in options.normalScrollElements
@@ -553,44 +579,18 @@
 				e = window.event || e;
 				var delta = Math.max(-1, Math.min(1,
 						(e.wheelDelta || -e.deltaY || -e.detail)));
-				var scrollable;
+
 				var activeSection = $('.fp-section.active');
+				var scrollable = isScrollable(activeSection);
 
 				if (!isMoving) { //if theres any #
-
-					//if there are landscape slides, we check if the scrolling bar is in the current one or not
-					if(activeSection.find('.fp-slides').length){
-						scrollable= activeSection.find('.fp-slide.active').find('.fp-scrollable');
-					}else{
-						scrollable = activeSection.find('.fp-scrollable');
-					}
-
 					//scrolling down?
 					if (delta < 0) {
-						if(scrollable.length > 0 ){
-							//is the scrollbar at the end of the scroll?
-							if(isScrolled('bottom', scrollable)){
-								$.fn.fullpage.moveSectionDown();
-							}else{
-								return true; //normal scroll
-							}
-						}else{
-							$.fn.fullpage.moveSectionDown();
-						}
-					}
+						scrolling('down', scrollable);
 
 					//scrolling up?
-					else {
-						if(scrollable.length > 0){
-							//is the scrollbar at the start of the scroll?
-							if(isScrolled('top', scrollable)){
-								$.fn.fullpage.moveSectionUp();
-							}else{
-								return true; //normal scroll
-							}
-						}else{
-							$.fn.fullpage.moveSectionUp();
-						}
+					}else {
+						scrolling('up', scrollable);
 					}
 				}
 
@@ -621,9 +621,7 @@
 				next = $('.fp-section').first();
 			}
 
-			if(next.length > 0 ||
-				(!next.length &&
-				(options.loopBottom || options.continuousVertical))){
+			if(next.length){
 				scrollPage(next, null, false);
 			}
 		};
@@ -687,6 +685,16 @@
 		    landscapeScroll(slides, destiny);
 		}
 
+		/**
+		* Maintains the active slides in the viewport
+		* (Because he `scroll` animation might get lost with some actions, such as when using continuousVertical)
+		*/
+		function keepSlidesPosition(){
+			$('.fp-slide.active').each(function(){
+				silentLandscapeScroll($(this));
+			});
+		}
+
 		function scrollPage(element, callback, isMovementUp){
 			var scrollOptions = {}, scrolledElement;
 			var dest = element.position();
@@ -725,6 +733,9 @@
 
 				// Maintain the displayed position (now that we changed the element order)
 				silentScroll($('.fp-section.active').position().top);
+
+				// Maintain the active slides visible in the viewport
+				keepSlidesPosition();
 
 				// save for later the elements that still need to be reordered
 				var wrapAroundElements = activeSection;
@@ -770,49 +781,43 @@
 				}
 
 				silentScroll($('.fp-section.active').position().top);
+
+				// Maintain the active slides visible in the viewport
+				keepSlidesPosition();
 			};
 
 
+			//actions to do once the section is loaded
+			var afterSectionLoads = function(){
+				continuousVerticalFixSectionOrder();
+
+				//callback (afterLoad) if the site is not just resizing and readjusting the slides
+				$.isFunction(options.afterLoad) && !localIsResizing && options.afterLoad.call(this, anchorLink, (sectionIndex + 1));
+
+				setTimeout(function () {
+					isMoving = false;
+					$.isFunction(callback) && callback.call(this);
+				}, scrollDelay);
+			}
+
+			//callback (onLeave) if the site is not just resizing and readjusting the slides
+			$.isFunction(options.onLeave) && !localIsResizing && options.onLeave.call(this, leavingSection, (sectionIndex + 1), yMovement);
+
 			// Use CSS3 translate functionality or...
 			if (options.css3 && options.autoScrolling) {
-
-				//callback (onLeave) if the site is not just resizing and readjusting the slides
-				$.isFunction(options.onLeave) && !localIsResizing && options.onLeave.call(this, leavingSection, (sectionIndex + 1), yMovement);
-
 
 				var translate3d = 'translate3d(0px, -' + dtop + 'px, 0px)';
 				transformContainer(translate3d, true);
 
 				setTimeout(function () {
-					//fix section order from continuousVertical
-					continuousVerticalFixSectionOrder();
-
-					//callback (afterLoad) 	if the site is not just resizing and readjusting the slides
-					$.isFunction(options.afterLoad) && !localIsResizing && options.afterLoad.call(this, anchorLink, (sectionIndex + 1));
-
-					setTimeout(function () {
-						isMoving = false;
-						$.isFunction(callback) && callback.call(this);
-					}, scrollDelay);
+					afterSectionLoads();
 				}, options.scrollingSpeed);
 			} else { // ... use jQuery animate
-
-				//callback (onLeave) if the site is not just resizing and readjusting the slides
-				$.isFunction(options.onLeave) && !localIsResizing && options.onLeave.call(this, leavingSection, (sectionIndex + 1), yMovement);
 
 				$(scrolledElement).animate(
 					scrollOptions
 				, options.scrollingSpeed, options.easing, function () {
-					//fix section order from continuousVertical
-					continuousVerticalFixSectionOrder();
-
-					//callback (afterLoad) if the site is not just resizing and readjusting the slides
-					$.isFunction(options.afterLoad) && !localIsResizing && options.afterLoad.call(this, anchorLink, (sectionIndex + 1));
-
-					setTimeout(function () {
-						isMoving = false;
-						$.isFunction(callback) && callback.call(this);
-					}, scrollDelay);
+					afterSectionLoads();
 				});
 			}
 
@@ -825,6 +830,8 @@
 				activateNavDots(anchorLink, sectionIndex);
 			}
 		}
+
+
 
 		function scrollToAnchor(){
 			//getting the anchor link in the URL and deleting the `#`
@@ -908,12 +915,26 @@
 			}
 		});
 
-		//navigation action
-		$(document).on('click', '#fp-nav a', function(e){
+		/**
+		* Scrolls to the section when clicking the navigation bullet
+		*/
+		$(document).on('click touchstart', '#fp-nav a', function(e){
 			e.preventDefault();
 			var index = $(this).parent().index();
 			scrollPage($('.fp-section').eq(index));
 		});
+
+		/**
+		* Scrolls the slider to the given slide destination for the given section
+		*/
+		$(document).on('click touchstart', '.fp-slidesNav a', function(e){
+			e.preventDefault();
+			var slides = $(this).closest('.fp-section').find('.fp-slides');
+			var destiny = slides.find('.fp-slide').eq($(this).closest('li').index());
+
+			landscapeScroll(slides, destiny);
+		});
+
 
 		//navigation tooltips
 		$(document).on({
@@ -922,7 +943,9 @@
 				$('<div class="fp-tooltip ' + options.navigationPosition +'">' + tooltip + '</div>').hide().appendTo($(this)).fadeIn(200);
 			},
 			mouseleave: function(){
-				$(this).find('.fp-tooltip').fadeOut().remove();
+				$(this).find('.fp-tooltip').fadeOut(200, function() {
+					$(this).remove();
+				});
 			}
 		}, '#fp-nav li');
 
@@ -940,7 +963,7 @@
 		/**
 		 * Scrolling horizontally when clicking on the slider controls.
 		 */
-		$('.fp-section').on('click', '.fp-controlArrow', function() {
+		$('.fp-section').on('click touchstart', '.fp-controlArrow', function() {
 			if ($(this).hasClass('fp-prev')) {
 				$.fn.fullpage.moveSlideLeft();
 			} else {
@@ -1013,30 +1036,29 @@
 				setURLHash(slideIndex, slideAnchor, anchorLink);
 			}
 
+			var afterSlideLoads = function(){
+				//if the site is not just resizing and readjusting the slides
+				if(!localIsResizing){
+					$.isFunction( options.afterSlideLoad ) && options.afterSlideLoad.call( this, anchorLink, (sectionIndex + 1), slideAnchor, slideIndex);
+				}
+				//letting them slide again
+				slideMoving = false;
+			};
+
 			if(options.css3){
 				var translate3d = 'translate3d(-' + destinyPos.left + 'px, 0px, 0px)';
 
 				slides.find('.fp-slidesContainer').toggleClass('fp-easing', options.scrollingSpeed>0).css(getTransforms(translate3d));
 
 				setTimeout(function(){
-					//if the site is not just resizing and readjusting the slides
-					if(!localIsResizing){
-						$.isFunction( options.afterSlideLoad ) && options.afterSlideLoad.call( this, anchorLink, (sectionIndex + 1), slideAnchor, slideIndex );
-					}
-
-					slideMoving = false;
+					afterSlideLoads();
 				}, options.scrollingSpeed, options.easing);
 			}else{
 				slidesContainer.animate({
 					scrollLeft : destinyPos.left
 				}, options.scrollingSpeed, options.easing, function() {
 
-					//if the site is not just resizing and readjusting the slides
-					if(!localIsResizing){
-						$.isFunction( options.afterSlideLoad ) && options.afterSlideLoad.call( this, anchorLink, (sectionIndex + 1), slideAnchor, slideIndex);
-					}
-					//letting them slide again
-					slideMoving = false;
+					afterSlideLoads();
 				});
 			}
 
@@ -1044,11 +1066,11 @@
 			slidesNav.find('li').eq(slideIndex).find('a').addClass('active');
 		}
 
+	    //when resizing the site, we adjust the heights of the sections, slimScroll...
+	    $(window).resize(resizeHandler);
 
 	    var resizeId;
-
-	    //when resizing the site, we adjust the heights of the sections, slimScroll...
-	    $(window).resize(function() {
+	    function resizeHandler(){
 	    	// rebuild immediately on touch devices
 			if (isTouchDevice) {
 	        	$.fn.fullpage.reBuild();
@@ -1059,7 +1081,7 @@
 
 	        	resizeId = setTimeout($.fn.fullpage.reBuild, 500);
 	      	}
-	    });
+	    }
 
 
 		/**
@@ -1097,7 +1119,6 @@
 					}else{
 						createSlimScrolling($(this));
 					}
-
 				}
 
 				//adjusting the position fo the FULL WIDTH slides...
@@ -1125,32 +1146,14 @@
 		 * Resizing of the font size depending on the window size as well as some of the images on the site.
 		 */
 		function resizeMe(displayHeight, displayWidth) {
-			//Standard height, for which the body font size is correct
+			//Standard dimensions, for which the body font size is correct
 			var preferredHeight = 825;
-			var windowSize = displayHeight;
+			var preferredWidth = 900;
 
-			/* Problem to be solved
-
-			if (displayHeight < 825) {
-				var percentage = (windowSize * 100) / preferredHeight;
-				var newFontSize = percentage.toFixed(2);
-
-				$("img").each(function() {
-					var newWidth = ((80 * percentage) / 100).toFixed(2);
-					$(this).css("width", newWidth + '%');
-				});
-			} else {
-				$("img").each(function() {
-					$(this).css("width", '');
-				});
-			}*/
-
-			if (displayHeight < 825 || displayWidth < 900) {
-				if (displayWidth < 900) {
-					windowSize = displayWidth;
-					preferredHeight = 900;
-				}
-				var percentage = (windowSize * 100) / preferredHeight;
+			if (displayHeight < preferredHeight || displayWidth < preferredWidth) {
+				var heightPercentage = (displayHeight * 100) / preferredHeight;
+				var widthPercentage = (displayWidth * 100) / preferredWidth;
+				var percentage = Math.min(heightPercentage, widthPercentage);
 				var newFontSize = percentage.toFixed(2);
 
 				$("body").css("font-size", newFontSize + '%');
@@ -1257,7 +1260,6 @@
 					}else{
 						element.wrapInner('<div class="fp-scrollable" />');
 					}
-
 
 					element.find('.fp-scrollable').slimScroll({
 						allowPageScroll: true,
@@ -1413,18 +1415,6 @@
 				}
 			}
 		}
-
-		/**
-		* Scrolls the slider to the given slide destination for the given section
-		*/
-		$(document).on('click', '.fp-slidesNav a', function(e){
-			e.preventDefault();
-			var slides = $(this).closest('.fp-section').find('.fp-slides');
-			var destiny = slides.find('.fp-slide').eq($(this).closest('li').index());
-
-			landscapeScroll(slides, destiny);
-		});
-
 
 		/**
 		* Checks for translate3d support
@@ -1588,7 +1578,8 @@
 
  			$(window)
 				.off('scroll', scrollHandler)
-  				.off('hashchange', hashChangeHandler);
+  				.off('hashchange', hashChangeHandler)
+  				.off('resize', resizeHandler);
 
 			$(document)
 				.off('click', '#fp-nav a')
@@ -1631,7 +1622,8 @@
 			container.css({
 	 			'height': '',
 	 			'position': '',
-	 			'-ms-touch-action': ''
+	 			'-ms-touch-action': '',
+	 			'touch-action': ''
 	 		});
 
 			//removing added classes
@@ -1650,9 +1642,6 @@
 
 			//scrolling the page to the top with no animation
 			$('html, body').scrollTop(0);
-
-			//to know if the plugin was already used in case it is used in a future again
-			container.addClass('fullpage-used');
 		}
 
 	};
