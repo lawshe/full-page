@@ -1,9 +1,0 @@
-{
-"track":"lawshe:BEFOREAFTER",
-"name": "lawshe:before-after",
-"description": "Meteor smart package for JQuery Before/After Plugin",
-"homepage": "https://github.com/lawshe/before-after",
-"author": "Jessica Lawshe",
-"version": "0.0.1",
-"githubUrl": "https://github.com/lawshe/before-after.git"
-}
