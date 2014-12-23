@@ -1,5 +1,5 @@
 /**
- * fullPage 2.4.6
+ * fullPage 2.5.1
  * https://github.com/alvarotrigo/fullPage.js
  * MIT licensed
  *
@@ -66,6 +66,9 @@
 		}, options);
 
 	    displayWarnings();
+
+	    //easeInQuart animation included in the plugin
+	    $.extend($.easing,{ easeInQuart: function (x, t, b, c, d) { return c*(t/=d)*t*t*t + b; }});
 
 		//Defines the delay to take place before being able to scroll to the next section
 		//BE CAREFUL! Not recommened to change it under 400 for a good behavior in laptops and
@@ -210,7 +213,7 @@
 			isResizing = true;
 
 			var windowsWidth = $(window).width();
-			windowsHeight = $(window).height();
+			windowsHeight = $(window).height();  //updating global var
 
 			//text and images resizing
 			if (options.resize) {
@@ -266,7 +269,7 @@
 		var slideMoving = false;
 
 		var isTouchDevice = navigator.userAgent.match(/(iPhone|iPod|iPad|Android|BlackBerry|BB10|Windows Phone|Tizen|Bada)/);
-		var isTouch = (('ontouchstart' in window) || (navigator.msMaxTouchPoints > 0));
+		var isTouch = (('ontouchstart' in window) || (navigator.msMaxTouchPoints > 0) || (navigator.maxTouchPoints));
 		var container = $(this);
 		var windowsHeight = $(window).height();
 		var isMoving = false;
@@ -295,7 +298,7 @@
 
 		//trying to use fullpage without a selector?
 		else{
-			console.error("Error! Fullpage.js needs to be initialized with a selector. For example: $('#myContainer').fullpage();");
+			showError('error', "Error! Fullpage.js needs to be initialized with a selector. For example: $('#myContainer').fullpage();");
 		}
 
 		//adding internal class names to void problem with common ones
@@ -439,6 +442,7 @@
 					}
 					else{
 						silentScroll(0);
+						setBodyClass(destiny);
 
 						//scrolling the page to the section with no animation
 						$('html, body').scrollTop(section.position().top);
@@ -638,7 +642,7 @@
 			// additional: if one of the normalScrollElements isn't within options.normalScrollElementTouchThreshold hops up the DOM chain
 			if (!checkParentForNormalScrollElement(event.target)) {
 
-				if(options.autoScrolling){
+				if(options.autoScrolling && !options.scrollBar){
 					//preventing the easing on iOS devices
 					event.preventDefault();
 				}
@@ -648,6 +652,7 @@
 
 				if (!isMoving && !slideMoving) { //if theres any #
 					var touchEvents = getEventsPage(e);
+
 					touchEndY = touchEvents['y'];
 					touchEndX = touchEvents['x'];
 
@@ -665,7 +670,7 @@
 					}
 
 					//vertical scrolling (only when autoScrolling is enabled)
-					else if(options.autoScrolling){
+					else if(options.autoScrolling && !options.scrollBar){
 
 						//is the movement greater than the minimum resistance to scroll?
 						if (Math.abs(touchStartY - touchEndY) > ($(window).height() / 100 * options.touchSensitivity)) {
@@ -704,6 +709,7 @@
 
 		function touchStartHandler(event){
 			var e = event.originalEvent;
+
 			var touchEvents = getEventsPage(e);
 			touchStartY = touchEvents['y'];
 			touchStartX = touchEvents['x'];
@@ -840,9 +846,7 @@
 			//more than once if the page is scrolling
 			isMoving = true;
 
-			if(typeof v.anchorLink !== 'undefined'){
-				setURLHash(slideIndex, slideAnchorLink, v.anchorLink);
-			}
+			setURLHash(slideIndex, slideAnchorLink, v.anchorLink, v.sectionIndex);
 
 			//callback (onLeave) if the site is not just resizing and readjusting the slides
 			$.isFunction(options.onLeave) && !v.localIsResizing && options.onLeave.call(this, v.leavingSection, (v.sectionIndex + 1), v.yMovement);
@@ -1016,44 +1020,51 @@
 		 * Sliding with arrow keys, both, vertical and horizontal
 		 */
 		$(document).keydown(function(e) {
-
 			//Moving the main page with the keyboard arrows if keyboard scrolling is enabled
-			if (options.keyboardScrolling && !isMoving && options.autoScrolling) {
-				switch (e.which) {
-					//up
-					case 38:
-					case 33:
-						$.fn.fullpage.moveSectionUp();
-						break;
+			if (options.keyboardScrolling && options.autoScrolling) {
 
-					//down
-					case 40:
-					case 34:
-						$.fn.fullpage.moveSectionDown();
-						break;
+				//preventing the scroll with arrow keys
+				if(e.which == 40 || e.which == 38){
+					e.preventDefault();
+				}
 
-					//Home
-					case 36:
-						$.fn.fullpage.moveTo(1);
-						break;
+				if(!isMoving){
+					switch (e.which) {
+						//up
+						case 38:
+						case 33:
+							$.fn.fullpage.moveSectionUp();
+							break;
 
-					//End
-					case 35:
-						$.fn.fullpage.moveTo( $('.fp-section').length );
-						break;
+						//down
+						case 40:
+						case 34:
+							$.fn.fullpage.moveSectionDown();
+							break;
 
-					//left
-					case 37:
-						$.fn.fullpage.moveSlideLeft();
-						break;
+						//Home
+						case 36:
+							$.fn.fullpage.moveTo(1);
+							break;
 
-					//right
-					case 39:
-						$.fn.fullpage.moveSlideRight();
-						break;
+						//End
+						case 35:
+							$.fn.fullpage.moveTo( $('.fp-section').length );
+							break;
 
-					default:
-						return; // exit this handler for other keys
+						//left
+						case 37:
+							$.fn.fullpage.moveSlideLeft();
+							break;
+
+						//right
+						case 39:
+							$.fn.fullpage.moveSlideRight();
+							break;
+
+						default:
+							return; // exit this handler for other keys
+					}
 				}
 			}
 		});
@@ -1143,7 +1154,7 @@
 
 			//only changing the URL if the slides are in the current section (not for resize re-adjusting)
 			if(section.hasClass('active')){
-				setURLHash(slideIndex, slideAnchor, anchorLink);
+				setURLHash(slideIndex, slideAnchor, anchorLink, sectionIndex);
 			}
 
 			var afterSlideLoads = function(){
@@ -1179,6 +1190,7 @@
 	    //when resizing the site, we adjust the heights of the sections, slimScroll...
 	    $(window).resize(resizeHandler);
 
+	    var previousHeight = windowsHeight;
 	    var resizeId;
 	    function resizeHandler(){
 	    	//checking if it needs to get responsive
@@ -1189,7 +1201,13 @@
 
 				//if the keyboard is visible
 				if ($(document.activeElement).attr('type') !== 'text') {
-		        	$.fn.fullpage.reBuild(true);
+					var currentHeight = $(window).height();
+
+					//making sure the change in the viewport size is enough to force a rebuild. (20 % of the window to avoid problems when hidding scroll bars)
+					if( Math.abs(currentHeight - previousHeight) > (20 * Math.max(previousHeight, currentHeight) / 100) ){
+			        	$.fn.fullpage.reBuild(true);
+			        	previousHeight = currentHeight;
+			        }
 		        }
 	      	}else{
 	      		//in order to call the functions only when the resize is finished
@@ -1497,7 +1515,7 @@
 		/**
 		* Sets the URL hash for a section with slides
 		*/
-		function setURLHash(slideIndex, slideAnchor, anchorLink){
+		function setURLHash(slideIndex, slideAnchor, anchorLink, sectionIndex){
 			var sectionHash = '';
 
 			if(options.anchors.length){
@@ -1526,7 +1544,29 @@
 				else{
 					location.hash = anchorLink;
 				}
+
+				setBodyClass(location.hash);
 			}
+			else if(typeof slideIndex !== 'undefined'){
+					setBodyClass(sectionIndex + '-' + slideIndex);
+			}
+			else{
+				setBodyClass(String(sectionIndex));
+			}
+		}
+
+		/**
+		* Sets a class for the body of the page depending on the active section / slide
+		*/
+		function setBodyClass(text){
+			//changing slash for dash to make it a valid CSS style
+			text = text.replace('/', '-').replace('#','');
+
+			//removing previous anchor classes
+			$("body")[0].className = $("body")[0].className.replace(/\b\s?fp-viewing-[^\s]+\b/g, '');
+
+			//adding the current anchor
+			$("body").addClass("fp-viewing-" + text);
 		}
 
 		/**
@@ -1563,7 +1603,7 @@
 
 
 		/**
-		* Removes the auto scrolling action fired by the mouse wheel and tackpad.
+		* Removes the auto scrolling action fired by the mouse wheel and trackpad.
 		* After this function is called, the mousewheel and trackpad movements won't scroll through sections.
 		*/
 		function removeMouseWheelHandler(){
@@ -1577,7 +1617,7 @@
 
 
 		/**
-		* Adds the auto scrolling action for the mouse wheel and tackpad.
+		* Adds the auto scrolling action for the mouse wheel and trackpad.
 		* After this function is called, the mousewheel and trackpad movements will scroll through sections
 		*/
 		function addMouseWheelHandler(){
@@ -1624,7 +1664,7 @@
 		function getMSPointer(){
 			var pointer;
 
-			//IE >= 11
+			//IE >= 11 & rest of browsers
 			if(window.PointerEvent){
 				pointer = { down: "pointerdown", move: "pointermove"};
 			}
@@ -1642,13 +1682,9 @@
 		*/
 		function getEventsPage(e){
 			var events = new Array();
-			if (window.navigator.msPointerEnabled){
-				events['y'] = e.pageY;
-				events['x'] = e.pageX;
-			}else{
-				events['y'] = e.touches[0].pageY;
-				events['x'] =  e.touches[0].pageX;
-			}
+
+			events['y'] = (typeof e.pageY !== 'undefined' && (e.pageY || e.pageX) ? e.pageY : e.touches[0].pageY);
+			events['x'] = (typeof e.pageX !== 'undefined' && (e.pageY || e.pageX) ? e.pageX : e.touches[0].pageX);
 
 			return events;
 		}
@@ -1768,13 +1804,23 @@
 			if (options.continuousVertical &&
 				(options.loopTop || options.loopBottom)) {
 			    options.continuousVertical = false;
-			    console && console.warn && console.warn("Option `loopTop/loopBottom` is mutually exclusive with `continuousVertical`; `continuousVertical` disabled");
+			    showError('warn', "Option `loopTop/loopBottom` is mutually exclusive with `continuousVertical`; `continuousVertical` disabled");
 			}
 			if(options.continuousVertical && options.scrollBar){
 				options.continuousVertical = false;
-				console && console.warn && console.warn("Option `scrollBar` is mutually exclusive with `continuousVertical`; `continuousVertical` disabled");
+				showError('warn', "Option `scrollBar` is mutually exclusive with `continuousVertical`; `continuousVertical` disabled");
 			}
+
+			//anchors can not have the same value as any element ID or NAME
+			$.each(options.anchors, function(index, name){
+				if($('#' + name).length || $('[name="'+name+'"]').length ){
+					showError('error', "data-anchor tags can not have the same value as any `id` element on the site (or `name` element for IE).");
+				}
+			});
 		}
 
+		function showError(type, text){
+			console && console[type] && console[type]('fullPage: ' + text);
+		}
 	};
 })(jQuery);
