@@ -3,3 +3,10 @@ This is a meteor smart package for [fullPage.js](http://alvarotrigo.com/fullPage
 
 # How to use
 - `meteor add lawshe:full-page`
+
+## Initialize
+```javascript
+Template.TemplateName.rendered = function() {
+    $('#fullpage').fullpage();
+}
+```
