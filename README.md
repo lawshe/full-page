@@ -13,7 +13,7 @@ Template.TemplateName.rendered = function() {
 
 ## Template Event Handlers
 
-In order for the template event handlers (like button clicks) to work, you should take into account that fullPage wraps your content inside wrappers as "dynamically added content". This will break the integration with Meteor's event handling.
+In order for the Template Event Handlers (like button clicks) to work, you should take into account that fullPage wraps your content inside wrappers as "dynamically added content". This will break the integration with Meteor's event handling.
 
 You can avoid this behaviour by initializing with  following options:
 ```javascript
